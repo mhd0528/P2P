@@ -1,5 +1,7 @@
 package custom;
 
+import model.PeerInfo;
+
 public class Util {
 
 	public Util() {
@@ -20,5 +22,20 @@ public class Util {
 			| (bytes[1]&0xff)<<16
 			| (bytes[2]&0xff)<<8
 			| (bytes[3]&0xff);
+	}
+	// if a boolean array is all true
+	public static boolean allTrue (boolean[] values) {
+	    for (boolean value : values) {
+	        if (!value)
+	            return false;
+	    }
+	    return true;
+	}
+	//byte2boolean
+	
+	//boolean2byte
+	
+	public static void writeLog(PeerInfo peerinfo, String logContent){
+		
 	}
 }

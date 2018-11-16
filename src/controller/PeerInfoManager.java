@@ -4,9 +4,11 @@ import java.util.*;
 import model.*;
 
 public class PeerInfoManager {
-	private static PeerInfoManager instance;
 	private PeerInfo myInfo;
 	private List<PeerInfo> peerInfoList;
+	private static class SingletonHolder {
+		public final static PeerInfoManager instance = new PeerInfoManager();
+	}
 	private PeerInfoManager() {
 		try {
 			FileReader reader = new FileReader("./PeerInfo.cfg");
@@ -28,10 +30,7 @@ public class PeerInfoManager {
 		}
 	}
 	public static PeerInfoManager getInstance() {
-		if (instance == null) {
-			instance = new PeerInfoManager();
-		}
-		return instance;
+		return SingletonHolder.instance;
 	}
 	public PeerInfo getMyInfo() {
 		return myInfo;

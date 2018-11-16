@@ -12,5 +12,16 @@ public class Config {
 		PIECE, //7
 		HANDSHAKE //8
 	};
-
+	public static enum LogType {
+		TCPConnection, //0
+		ChangeOfPreferredNeighbor, //1
+		ChangeOfOptUnchokedNeighbor, //2
+		Unchoking, //3
+		Choking, //4
+		ReceivingHaveMessage, //5
+		ReceivingInterestedMessage, //6
+		ReceivingNotInterestedMessage, //7
+		DownloadingAPiece, //8
+		CompletionOfDownload, //9
+	}
 }

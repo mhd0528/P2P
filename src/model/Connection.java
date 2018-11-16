@@ -11,31 +11,29 @@ public class Connection extends Thread{
 	private PeerInfo peerInfo = null;
 	private InputStream inputStream;
 	private OutputStream outputStream;
-	private Boolean correspondingPeersCompleted = false;
-	private Boolean receivedHandShake = false;
-	private Boolean serverChoke = false;
-	private Boolean clientInterest = false;
-	
-	
-	//check handshake
-	public Connection(Socket s) {
+	private boolean correspondingPeersCompleted = false;
+	private boolean receivedHandShake = false;
+	private boolean sendedHandShake = false;
+	private boolean peerChokeMe = true;
+	private boolean peerInterestMe = false;
+	private int downloadingNumOfPeriod = 0;
+	private peerProcess processController;
+	private Log log;
+	private MessageHandler messageHandler;
+
+	public Connection(Socket s, PeerInfo info, peerProcess controller) {
 		try {
 			socket = s;
 			inputStream = socket.getInputStream();
 			outputStream = socket.getOutputStream();
-			super.start();
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public Connection(Socket s, PeerInfo info) {
-		try {
-			socket = s;
-			inputStream = socket.getInputStream();
-			outputStream = socket.getOutputStream();
-			peerInfo = info;
+			processController = controller;
+			log = new Log();
+			messageHandler = new MessageHandler(this);
+			if (info != null) {
+				peerInfo = info;
+				log.setOpPeer(peerInfo);
+				log.writeLog(LogType.TCPConnection);
+			}
 			super.start();
 		} catch(Exception e) {
 			e.printStackTrace();
@@ -45,12 +43,10 @@ public class Connection extends Thread{
 	@Override
 	public void run() {
 		try {
-			
 			if (peerInfo != null) {
-
-				MessageHandler.getInstance().sendHandShakeMessage(this);
+				messageHandler.sendHandShakeMessage();
+				messageHandler.sendBitfieldMessage();
 			}
-			//need to add a Controller.sendBitfiedMessage()
 			
 			//need to implement stop condition
 			while(!correspondingPeersCompleted) {
@@ -59,47 +55,53 @@ public class Connection extends Thread{
 				MessageType type = message.getType();
 				switch(type) {
 					case HANDSHAKE: {
-						MessageHandler.getInstance().handleHandshakeMessage(this, message);
+						messageHandler.handleHandshakeMessage(message);
 					}
 					break;
 					case CHOKE: {
-						serverChoke = true;
+						peerChokeMe = true;
+						System.out.println(peerInfo.getId() + " choke me");
+						log.writeLog(LogType.Choking);
 					}
 					break;
 					case UNCHOKE: {
-						serverChoke = false;
+						peerChokeMe = false;
+						messageHandler.handleUnchokedMessage(message);
+						System.out.println(peerInfo.getId() + " unchoke me");
+						log.writeLog(LogType.Unchoking);
 					}
 					break;
 					case INTERESTED: {
-						clientInterest = true;
+						System.out.println(peerInfo.getId() + " interest me");
+						peerInterestMe = true;
+						log.writeLog(LogType.ReceivingInterestedMessage);
 					}
 					break;
 					case NOT_INTERESTED: {
-						clientInterest = false;
+						System.out.println(peerInfo.getId() + " notInterest me");
+						peerInterestMe = false;
+						log.writeLog(LogType.ReceivingNotInterestedMessage);
 					}
 					break;
 					case HAVE: {
-						
+						messageHandler.handleHaveMessage(message);
+						log.writeLog(LogType.ReceivingHaveMessage);
 					}
 					break;
 					case BITFIELD: {
-						MessageHandler.getInstance().handleBitFieldMessage(this, message);
+						messageHandler.handleBitFieldMessage(message);
 					}
 					break;
 					case REQUEST: {
 						//when receive request, check if is choked
-						if (serverChoke == true){
-							//don't reply the request
-						}
-						else
-						{
-							//send requested piece
-						}
-								
+						System.out.println("receive request from " + peerInfo.getId());
+						messageHandler.handleRequestMessage(message);							
 					}
 					break;
 					case PIECE: {
-						
+						downloadingNumOfPeriod++;
+						System.out.println("receive piece from " + peerInfo.getId());
+						int pieceNum = messageHandler.handlePieceMessage(message, processController.getConnectionList());
 					}
 					break;
 					default: {
@@ -143,10 +145,34 @@ public class Connection extends Thread{
 	public void setReceivedHandShake() {
 		receivedHandShake = true;
 	}
-	public Boolean getReceivedHandShake() {
+	public boolean getReceivedHandShake() {
 		return receivedHandShake;
 	}
-	
+	public int getDownloadingNumOfPeriod() {
+		return downloadingNumOfPeriod;
+	}
+	public void resetDownloadingNum() {
+		downloadingNumOfPeriod = 0;
+	}
+	public boolean getInterestedFlag() {
+		return peerInterestMe;
+	}
+	public void setInterested(){
+		peerInterestMe = true;
+	}
+	public void setNotInterested(){
+		peerInterestMe = false;
+	}
+	public void setSendedHandShake(){
+		sendedHandShake = true;
+	}
+	public boolean getSendedHandShake(){
+		return sendedHandShake;
+	}
+	public Log getLogger() {
+		return log;
+	}
+
 	public Message readMessage() throws Exception{
 		
 		if (!receivedHandShake) {
@@ -184,6 +210,8 @@ public class Connection extends Thread{
 			byte[] lengthBytes = Arrays.copyOfRange(typeAndLength, 0, 4);
 			int length = Util.Byte2Int(lengthBytes);
 			
+			System.out.println("typeIndex" + typeIndex);
+			
 			Message message;
 			if (length == 1) {
 				message = new Message(type, null);
@@ -199,8 +227,12 @@ public class Connection extends Thread{
 			}
 			return message;
 		}
-
 	}
+	
+	public boolean getpeerChokeMe(){
+		return peerChokeMe;
+	}
+	
 	public void close() throws IOException {
 		socket.close();
 	}

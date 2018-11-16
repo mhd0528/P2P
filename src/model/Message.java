@@ -23,7 +23,7 @@ public class Message {
 			byte[] message = new byte[size];
 			byte[] messageLength = Util.IntToByte(payload.length + 1);
 			byte messageType = (byte)String.valueOf(type.ordinal()).charAt(0);
-			System.arraycopy(messageLength, 0, message, 0, 3);
+			System.arraycopy(messageLength, 0, message, 0, 4);
 			message[4] = messageType;
 			System.arraycopy(payload, 0, message, 5, payload.length);
 			return message;
@@ -32,7 +32,7 @@ public class Message {
 			byte[] message = new byte[size];
 			byte[] messageLength = Util.IntToByte(1);
 			byte messageType = (byte)String.valueOf(type.ordinal()).charAt(0);
-			System.arraycopy(messageLength, 0, message, 0, 3);
+			System.arraycopy(messageLength, 0, message, 0, 4);
 			message[4] = messageType;
 			return message;
 		}

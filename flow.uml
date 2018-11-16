@@ -1,0 +1,94 @@
+@startuml
+participant PeerA as a
+participant PeerB as b
+
+note over a, b
+	11.4 Initialize
+end note
+
+a <-> b: Handshake message
+a <-> b: Bitfield message
+alt receive Bitfield message
+	
+	note left
+	Length is the number of fileblock.
+	end note
+
+	
+	a -> a: updateBitfield state
+	
+	a -> b: Interest/Not Interest message
+	note left
+	compare to check if there is interested block
+	end note
+end alt
+
+alt receive Interesed/Not Interested message
+	a -> a: record into interested list
+end alt
+
+loop every p(m) seconds
+	a -> a: 
+	note left
+	select K fastest download rate in interested list as preferred neighbor list
+	(randomly one in the rest as optimistically neighbor)
+	If already unchoked the peer, don't send unchoke message
+	If already have all field, randomly select k + 1 peers
+	end note
+	
+	alt b is in prefered list and optimistically neighbor
+		a -> b: unchocked
+	else
+		a -> b: chocked
+	end alt
+
+end loop
+
+
+alt receive unchoked
+	
+	a -> a: compare to find if there is still having interesting block
+	alt true
+		a -> b: request random one interested piece, which not request
+	else false
+		a -> b: Not interested message
+	
+	end alt
+	
+	
+else receive choke
+end alt
+
+alt received request
+	 a -> b: send required Piece
+	 
+end alt
+
+alt received Piece
+	a -> a: updateBitfield state
+	
+	alt
+		a -> b: request random one interested piece, which not request
+		note left
+		compare to find if there is still having interesting block
+		if true randomly select one block
+		end note
+	else
+		a -> b: Not interested
+		b -> b: record into interested list
+	end alt
+
+	a -> b: have Piece number
+	
+end alt
+
+alt receive have message
+	a -> a: updateBitfield state
+	a -> b: Interest/Not Interest message
+	note left
+	compare to check if there is interested block
+	end note
+end alt
+
+
+@enduml
